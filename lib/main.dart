@@ -140,22 +140,6 @@ class _HomeState extends State<Home> {
       ),
       body: Column(
         children: <Widget>[
-          Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: TextField(
-              decoration: InputDecoration(
-                labelText: 'Search Tasks',
-                hintText: 'Enter a search query',
-                prefixIcon: Icon(Icons.search),
-              ),
-              onChanged: (query) {
-                setState(() {
-                  searchQuery = query;
-                });
-                fetchTasks();
-              },
-            ),
-          ),
           Expanded(
             child: ListView.builder(
               itemCount: tasks.length,
@@ -209,16 +193,49 @@ class _HomeState extends State<Home> {
           ),
         ],
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          showDialog(
-            context: context,
-            builder: (context) {
-              return AddTaskDialog(addTask: addTask);
-            },
-          );
-        },
-        child: Icon(Icons.add),
+      floatingActionButton: Stack(
+        children: [
+          Positioned(
+            bottom: 16, 
+            right: 16, 
+            child: FloatingActionButton(
+              onPressed: () {
+                showDialog(
+                  context: context,
+                  builder: (context) {
+                    return AddTaskDialog(addTask: addTask);
+                  },
+                );
+              },
+              child: Icon(Icons.add),
+            ),
+          ),
+          Positioned(
+            bottom: 80, 
+            right: 16, 
+            child: Container(
+              width: 200, 
+              decoration: BoxDecoration(
+                color: Colors.lightBlue[200], 
+                borderRadius: BorderRadius.circular(20), 
+              ),
+              child: TextField(
+                decoration: InputDecoration(
+                  labelText: 'Search Tasks',
+                  hintText: 'Enter a search query',
+                  prefixIcon: Icon(Icons.search),
+                  border: InputBorder.none, 
+                ),
+                onChanged: (query) {
+                  setState(() {
+                    searchQuery = query;
+                  });
+                  fetchTasks();
+                },
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -418,7 +435,6 @@ class SearchTaskDelegate extends SearchDelegate<String> {
 
   @override
   Widget buildResults(BuildContext context) {
-    // This is not used in this example
     return Container();
   }
 
@@ -429,7 +445,6 @@ class SearchTaskDelegate extends SearchDelegate<String> {
         ListTile(
           title: Text('Search for tasks with: "$query"'),
         ),
-        // You can add suggestions based on your needs
       ],
     );
   }
