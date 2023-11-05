@@ -40,6 +40,7 @@ class Home extends StatefulWidget {
 
 class _HomeState extends State<Home> {
   List<Task> tasks = [];
+  String searchQuery = '';
 
   @override
   void initState() {
@@ -49,7 +50,8 @@ class _HomeState extends State<Home> {
 
   Future<void> fetchTasks() async {
     final query = QueryBuilder(ParseObject('Task_Details'))
-      ..orderByDescending('createdAt'); // You can customize the query as needed
+      ..orderByDescending('createdAt')
+      ..whereContains('title', searchQuery);
 
     final response = await query.query();
 
@@ -68,7 +70,7 @@ class _HomeState extends State<Home> {
     final response = await newTask.save();
 
     if (response.success) {
-      fetchTasks(); // Refresh the task list after adding a new task
+      fetchTasks();
     }
   }
 
@@ -80,7 +82,7 @@ class _HomeState extends State<Home> {
     final response = await task.save();
 
     if (response.success) {
-      fetchTasks(); // Refresh the task list after editing a task
+      fetchTasks();
     }
   }
 
@@ -90,12 +92,11 @@ class _HomeState extends State<Home> {
     final response = await task.delete();
 
     if (response.success) {
-      fetchTasks(); // Refresh the task list after deleting a task
+      fetchTasks();
     }
   }
 
   void viewTaskDetails(Task task) {
-    // Navigate to a new screen to view task details
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (context) => TaskDetailsScreen(task: task),
@@ -104,7 +105,6 @@ class _HomeState extends State<Home> {
   }
 
   void editTaskDetails(Task task) {
-    // Show a dialog for editing task details
     showDialog(
       context: context,
       builder: (context) {
@@ -119,59 +119,98 @@ class _HomeState extends State<Home> {
       appBar: AppBar(
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
         title: Text(widget.title),
+        actions: [
+          IconButton(
+            icon: Icon(Icons.search),
+            onPressed: () {
+              showSearch(
+                context: context,
+                delegate: SearchTaskDelegate(
+                  onSearch: (query) {
+                    setState(() {
+                      searchQuery = query;
+                    });
+                    fetchTasks();
+                  },
+                ),
+              );
+            },
+          ),
+        ],
       ),
-      body: ListView.builder(
-        itemCount: tasks.length,
-        itemBuilder: (context, index) {
-          final task = tasks[index];
-          return Padding(
-            padding: const EdgeInsets.only(
-              top: 8.0,
-              left: 8.0,
-              right: 8.0,
-            ),
-            child: Container(
-              decoration: BoxDecoration(
-                color: Colors.lightBlue[100],
-                borderRadius: BorderRadius.circular(10),
+      body: Column(
+        children: <Widget>[
+          Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: TextField(
+              decoration: InputDecoration(
+                labelText: 'Search Tasks',
+                hintText: 'Enter a search query',
+                prefixIcon: Icon(Icons.search),
               ),
-              child: ListTile(
-                title: Text(
-                  task.title,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(fontWeight: FontWeight.bold),
-                ),
-                subtitle: Text(
-                  task.description,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                trailing: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    IconButton(
-                      icon: Icon(Icons.edit),
-                      onPressed: () {
-                        editTaskDetails(task);
-                      },
-                    ),
-                    IconButton(
-                      icon: Icon(Icons.delete),
-                      onPressed: () {
-                        deleteTask(task.objectId);
-                      },
-                    ),
-                  ],
-                ),
-              ),
+              onChanged: (query) {
+                setState(() {
+                  searchQuery = query;
+                });
+                fetchTasks();
+              },
             ),
-          );
-        },
+          ),
+          Expanded(
+            child: ListView.builder(
+              itemCount: tasks.length,
+              itemBuilder: (context, index) {
+                final task = tasks[index];
+                return Padding(
+                  padding: const EdgeInsets.only(
+                    top: 8.0,
+                    left: 8.0,
+                    right: 8.0,
+                  ),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: Colors.lightBlue[100],
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: ListTile(
+                      title: Text(
+                        task.title,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                      subtitle: Text(
+                        task.description,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      trailing: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          IconButton(
+                            icon: Icon(Icons.edit),
+                            onPressed: () {
+                              editTaskDetails(task);
+                            },
+                          ),
+                          IconButton(
+                            icon: Icon(Icons.delete),
+                            onPressed: () {
+                              deleteTask(task.objectId);
+                            },
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+        ],
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () {
-          // Show a dialog to add a new task
           showDialog(
             context: context,
             builder: (context) {
@@ -349,3 +388,49 @@ class TaskDetailsScreen extends StatelessWidget {
   }
 }
 
+class SearchTaskDelegate extends SearchDelegate<String> {
+  final ValueChanged<String> onSearch;
+
+  SearchTaskDelegate({required this.onSearch});
+
+  @override
+  List<Widget> buildActions(BuildContext context) {
+    return [
+      IconButton(
+        icon: Icon(Icons.clear),
+        onPressed: () {
+          query = '';
+          onSearch('');
+        },
+      ),
+    ];
+  }
+
+  @override
+  Widget buildLeading(BuildContext context) {
+    return IconButton(
+      icon: Icon(Icons.arrow_back),
+      onPressed: () {
+        close(context, '');
+      },
+    );
+  }
+
+  @override
+  Widget buildResults(BuildContext context) {
+    // This is not used in this example
+    return Container();
+  }
+
+  @override
+  Widget buildSuggestions(BuildContext context) {
+    return ListView(
+      children: [
+        ListTile(
+          title: Text('Search for tasks with: "$query"'),
+        ),
+        // You can add suggestions based on your needs
+      ],
+    );
+  }
+}
